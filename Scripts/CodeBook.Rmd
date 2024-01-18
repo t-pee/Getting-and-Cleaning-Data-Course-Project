@@ -1,0 +1,210 @@
+---
+title: "Getting and Cleaning Data - Course Project"
+author: "T. Porter "
+date: "2024-01-17"
+output: 
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Getting and Cleaning Data - Course Project
+## Codebook
+
+# Introduction
+
+This project generates a high-level summarized data set based on the summary datasets provided in the "Human Activity Recognition Using Smartphones" Version 1.0 dataset [1].  See the Data/UCI HAR Dataset/readme.txt file for details on how the summary datasets were produced.
+
+The data was obtained from here:
+
+http://archive.ics.uci.edu/ml/datasets/Human+Activity+Recognition+Using+Smartphones
+
+The raw data was downloaded and is now located within the "Data/UCI HAR Dataset" directory of this project.
+
+The raw data was processed to give a tidy summary. The following shows how the data was processed to arrive at the final result.
+
+
+# Project Output: Tidy Data Set (Data/datMeans.txt)
+_The summarized tidy data set is located in the project Data folder and is named datMeans.txt_
+
+
+Variable            | Domain | Description                     | Units    
+--------------------|:------:|---------------------------------|----------
+Activity | NA | The type of activity | Factor: WALKING, WALKING_UPSTAIRS, WALKING_DOWNSTAIRS, SITTING, STANDING, LAYING
+DataType | NA | Indicates test or training data | Factor: Test, Train
+tBodyAcc-mean()-XYZ | time| Mean of mean body acceleration measurements | g
+tBodyAcc-std()-XYZ| time | Mean of body accel measurement standard deviation | g
+tGravityAcc-mean()-XYZ | time | Mean of mean gravity accel measurements | g
+tGravityAcc-std()-XYZ | time | Mean of gravity accel measurement std dev | g
+tBodyAccJerk-mean()-XYZ | time | Mean of mean body jerk measurements | g/s 
+tBodyAccJerk-std()-XYZ | time | Mean of body jerk measurement std dev | g/s
+tBodyGyro-mean()-XYZ | time | Mean of mean body gyro measurements | rad/s
+tBodyGyro-std()-XYZ | time | Mean of body gyro measurement std dev | rad/s
+tBodyGyroJerk-mean()-XYZ | time | Mean of mean body gyro jerk measurements | rad/s^2
+tBodyGyroJerk-std()-XYZ | time | Mean of body gyro jerk measurement std dev | rad/s^2
+fBodyAcc-mean()-XYZ | freq | Mean of body accel mean freq domain measurements | Hz 
+fBodyAcc-std()-XYZ | freq | Mean of body accel freq domain measurement std dev | Hz
+fBodyAccJerk-mean()-XYZ | freq | Mean of body accel jerk mean freq domain measurements | Hz/s
+fBodyAccJerk-std()-XYZ | freq | Mean of body accel jerk freq domain measurement std dev | Hz/s
+fBodyGyro-mean()-XYZ | freq | Mean of body gyro mean freq domain measurements | Hz
+fBodyGyro-std()-XYZ | freq | Mean of body gyro freq domain measurement std dev | Hz
+|||
+
+-------------------
+
+# Data Processing Steps
+
+
+
+**Step 0: Read in the raw data**
+
+The data files used for this project are
+```{r datapaths}
+  pathDatTest    <- "../Data/UCI HAR Dataset/test/X_test.txt"     # test data
+  pathNamesTest  <- "../Data/UCI HAR Dataset/test/y_test.txt"     # test activities
+  pathDatTrain   <- "../Data/UCI HAR Dataset/train/X_train.txt"   # training data
+  pathNamesTrain <- "../Data/UCI HAR Dataset/train/y_train.txt"   # training activities
+  pathActivities <- "../Data/UCI HAR Dataset/activity_labels.txt" # activity labels
+  pathFeatures   <- "../Data/UCI HAR Dataset/features.txt"        # varible names
+```
+
+The data files are read and stored for easy use
+```{r readData}
+  datTest    <- read.table(pathDatTest)
+  datTrain   <- read.table(pathDatTrain)
+  actTest    <- read.table(pathNamesTest)
+  actTrain   <- read.table(pathNamesTrain)
+  namesAct   <- read.table(pathActivities)
+  namesFeat  <- read.table(pathFeatures)
+```
+
+
+
+**Step 1: Merge the training and test data**
+
+Before merging the data, it is convenient at this time to first perform **Step 4: Label the dataset with descriptive names**.
+
+```{r Step4}
+  ### Step 1a & 4: Add descriptive variable names
+  names(datTest)  <- namesFeat[,2]  # add names to test data
+  names(datTrain) <- namesFeat[,2]  # add names to training data
+```
+
+**Step 1b: Create vectors containing "Test" or "Train" and add to datasets**
+
+```{r Step1b}
+  ## Create some vectors of "Test" and "Train"
+  datTypeTest <- rep("Test", length(datTest[,1]))
+  datTypeTrain <- rep("Train", length(datTrain[,1]))
+  
+  ## Insert them as first column in the datasets
+  datTest  <- cbind(datTypeTest,  datTest)
+  datTrain <- cbind(datTypeTrain, datTrain)
+  
+  ## Add a descriptive name
+  names(datTest)[1]  <- "DataType"
+  names(datTrain)[1] <- "DataType"
+```
+
+**Step 1c: Add the type of activity as the new first column**
+
+```{r Step 1c}
+  ##  Bind the activities as new first column (variable)
+  datTest  <- cbind(actTest,  datTest)
+  datTrain <- cbind(actTrain, datTrain)
+  
+  ## Add a column name
+  names(datTest)[1]  <- "Activity"
+  names(datTrain)[1] <- "Activity"
+```
+
+**Step 1d: Merge the test and training tables into a new table**
+
+```{r Step1d}
+  ## 1d. Merge the two tables into one
+  datAll <- rbind(datTest, datTrain)
+```
+
+The new table now contains ALL the summary data. Activity types are still in code form; this will be addressed in Step 3.
+
+At this point, our data looks like this:
+```{r Step3Output, echo=FALSE}
+  head(datAll)
+```
+
+
+
+**Step 2: Extract only the measurements on the mean and standard deviation for each measurement**
+
+For the high-level summary output, We only want the variables associated with Means and Standard Deviations of the measurements.
+
+_**NOTE:** Within the source data, there are two types of means:_
+  _(1) Means of the time and frequency domain variables, and_ 
+  _(2) Mean frequencies of the frequency domain variables_.
+
+_For this project, the mean frequencies are not included. If the frequency domain means are needed, change the grep string to ".*mean.*"_
+
+**Step 2a: Identify which columns to extract**
+
+```{r Step2a}
+  colAct  <- 1                                    ## 1st column (Activity)
+  colType <- 2                                    ## 2nd column (Data Type)
+  colMean <- grep(".*mean..-.*", names(datAll))  
+  colStd  <- grep(".*std..-.*",  names(datAll))  
+  
+  # create sorted vector of column indices to keep
+  colKeep <- names(datAll[sort(c(colAct, colType, colMean, colStd))])
+```
+
+**Step 2b: Extract the columns and store in a new table**
+
+```{r Step2b1, echo=FALSE, results="HIDE"}
+  ## needed for select()
+  library(dplyr)
+```
+
+```{r Step 2b2}
+  datAll <- datAll %>% select(all_of(colKeep))
+```
+
+
+
+**Step 3: Use descriptive activity names to describe the activity codes**
+
+Verbose activity names are stored in the _namesAct_ table. 
+
+```{r Step3}
+  ## Replace the codes with the words in DatAll
+  datAll$Activity <- namesAct[datAll$Activity, 2]
+```
+
+
+
+**Step 4: Add descriptive labels to dataset for variable names**
+
+This was handled in Step 1, before the columns were extracted.
+A detailed explanation of the variable names is given in the source data readme (Data/UCI HAR Dataset/readme.txt)
+
+
+
+**Step 5: Create an independent tidy dataset with the average of each variable for each activity and each subject**
+
+```{r Step5}
+ datMeans <- datAll %>%                          ## datMeans is new tidy dataset
+    group_by(Activity, DataType) %>%             ## set grouping
+    summarize_at(vars(names(datAll)[-(1:2)]), mean)   ## Get means for all bu cols 1 & 2
+```
+
+The operation is complete. The datMeans table can be used as-is, or it can be written to disk.
+
+```{r Step5Output, echo=FALSE}
+  write.table(datMeans, "../Output/datMeans.txt")
+  head(datMeans)
+```
+
+ 
+------------------------------------
+**References:**
+[1] Davide Anguita, Alessandro Ghio, Luca Oneto, Xavier Parra and Jorge L. Reyes-Ortiz. Human Activity Recognition on Smartphones using a Multiclass Hardware-Friendly Support Vector Machine. International Workshop of Ambient Assisted Living (IWAAL 2012). Vitoria-Gasteiz, Spain. Dec 2012
