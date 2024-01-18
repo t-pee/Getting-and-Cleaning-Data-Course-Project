@@ -14,7 +14,7 @@ The raw data was downloaded and is now located within the "Data/UCI HAR Dataset"
 
 The output of this project is ./Output/datMeans.txt
 
-The output file contains a summary of the summary data provided in the source files. The contents of the file are outlined in the CodeBook.rmd file located in ./Scripts/CodeBook.Rmd (or [./Scripts/CodeBook.html](https://github.com/t-pee/Getting-and-Cleaning-Data-Course-Project/blob/main/Scripts/CodeBook.html)).
+The output file contains a summary of the summary data provided in the source files. The contents of the file are outlined in the CodeBook.rmd file located in ./Scripts/CodeBook.Rmd (or [./Scripts/CodeBook.html](https://htmlpreview.github.io/?https://github.com/t-pee/Getting-and-Cleaning-Data-Course-Project/blob/main/Scripts/CodeBook.html)).
 
 The R code used to generate the output lives in the CodeBook.Rmd file, as well as the main() function in run_analysis.R.
 
